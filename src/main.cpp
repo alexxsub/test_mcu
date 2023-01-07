@@ -5,22 +5,25 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#include <../lib/button.h>
+#include <EasyButton.h>
 
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 64, &Wire, -1);
+
 
 
 #define DHTPIN 12
 #define BTNPIN 14
 
 #define DHTTYPE DHT11
-
+#define BAUDRATE 115200
 
 DHT dht(DHTPIN, DHTTYPE);
-button btn1(BTNPIN);
+EasyButton button(BTNPIN);
 
 float Temperature;
 float Humidity;
+
+long timing=0;
 
 String utf8rus(String source)
 {
@@ -55,43 +58,19 @@ String utf8rus(String source)
 return target;
 }
 
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(DHTPIN, INPUT);
-  dht.begin();
-
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.display();
-  delay(100);
-  display.clearDisplay();
-  display.display();
-  display.setTextSize(1.75);
-  display.setTextColor(WHITE);
+void onPressed()
+{
+  Serial.println("Button pressed");
 }
-bool flag = false;
-uint32_t btnTimer = 0;
-void loop() {
-
-  if (btn1.click()) Serial.println("press 1");
-
-   Humidity = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  Temperature = dht.readTemperature();
-
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(Humidity) || isnan(Temperature)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
-  }
-
-  Serial.print(F("Humidity: "));
-  Serial.print(Humidity);
-  Serial.print(F("%  Temperature: "));
-  Serial.print(Temperature);
-  Serial.println(F("°C "));
-
+void onSequenceMatched()
+{
+  Serial.println("Button pressed 3 times");
+}
+void buttonPressedTwoSeconds()
+ {
+  Serial.println("Button pressed for 2 sec");
+}
+void print_screen(){
   display.setCursor(0,0);
   display.clearDisplay();
 
@@ -119,5 +98,61 @@ void loop() {
   
   display.display();
   
-  delay(1000);
+
+}
+void setup() {
+  Serial.begin(BAUDRATE);
+  pinMode(DHTPIN, INPUT);
+  dht.begin();
+
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.display();
+  delay(100);
+  display.clearDisplay();
+  display.display();
+  display.setTextSize(1.75);
+  display.setTextColor(WHITE);
+  
+  button.begin();
+  button.onPressed(onPressed);
+  button.onPressedFor(2000, buttonPressedTwoSeconds);
+  button.onSequence(3 /* number of presses */, 2000 /* timeout */, onSequenceMatched /* callback */);
+}
+void print_serial()
+{
+   Serial.print(F("Humidity: "));
+  Serial.print(Humidity);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(Temperature);
+  Serial.println(F("°C "));
+}
+void read_sensor(){
+     Humidity = dht.readHumidity();
+  // Read temperature as Celsius (the default)
+  Temperature = dht.readTemperature();
+
+
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(Humidity) || isnan(Temperature)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+
+}
+void loop() {
+
+ 
+
+ 
+if (millis() - timing < 1000){ 
+  button.read();
+} else{
+  read_sensor();
+  print_serial();
+  print_screen();
+  timing = millis(); 
+  
+ }
+
+ // delay(1000);
 }
